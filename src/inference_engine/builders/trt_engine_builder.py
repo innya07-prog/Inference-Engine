@@ -240,16 +240,26 @@ def build_tensorrt_engine(
     except Exception as exc:
         raise TensorRTBuildError(f"build_serialized_network raised: {exc}") from exc
 
-    if serialized is None or len(serialized) == 0:
-        raise TensorRTBuildError("build_serialized_network returned empty engine bytes.")
+    if serialized is None:
+    raise TensorRTBuildError(
+        "TensorRT returned empty serialized engine."
+    )
 
     engine_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        engine_path.write_bytes(serialized)
-    except OSError as exc:
-        raise TensorRTBuildError(f"Failed to write engine file: {exc}") from exc
 
-    logger.info("Wrote TensorRT engine (%s bytes) to %s", len(serialized), engine_path)
+    try:
+        serialized_bytes = bytes(serialized)
+        engine_path.write_bytes(serialized_bytes)
+    except OSError as exc:
+        raise TensorRTBuildError(
+            f"Failed to write engine file: {exc}"
+        ) from exc
+
+    logger.info(
+        "Wrote TensorRT engine (%s bytes) to %s",
+        len(serialized_bytes),
+        engine_path,
+    )
     logger.info(
         "tensorrt_build_done %s",
         json.dumps(
