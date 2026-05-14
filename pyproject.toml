@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inference-engine"
+version = "0.1.0"
+description = "PyTorch to ONNX / TensorRT inference engine"
+requires-python = ">=3.10"
+
+dependencies = [
+  "numpy>=1.24,<3",
+  "torch>=2.2",
+  "onnx>=1.15",
+  "onnx-ir>=0.2",
+  "onnxscript>=0.5",
+  "onnxruntime>=1.16",
+]
+
+[project.optional-dependencies]
+serve = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "pydantic>=2.6",
+]
+trt = [
+  "tensorrt>=10.0.0",
+]
+integration = [
+  "torchvision>=0.17",
+  "pytest>=8.0",
+]
+
+[project.scripts]
+inference-engine = "inference_engine.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+inference_engine = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: slow integration tests (optional GPU / TensorRT)",
+]

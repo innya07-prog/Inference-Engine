@@ -1,0 +1,17 @@
+services:
+  inference-engine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: inference-engine:latest
+    # Override for inference, e.g.:
+    # command: ["run-onnx", "--model", "/models/model.onnx", "--random-shape", "1,128"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all

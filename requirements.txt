@@ -1,0 +1,6 @@
+# Editable install (recommended): pip install -e .
+# Locked / CI installs: pip install -e ".[serve]"  # optional API serving
+#
+# Core runtime deps are declared in pyproject.toml.
+
+-e .

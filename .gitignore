@@ -1,0 +1,35 @@
+# Virtual environment
+
+.venv/
+
+# Python
+
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+
+# Build
+
+build/
+dist/
+*.egg-info/
+
+# Model artifacts
+
+weights/
+*.onnx
+*.engine
+*.pt
+
+# IDE
+
+.vscode/
+
+# Pytest
+
+.pytest_cache/
+
+# Logs
+
+*.log
