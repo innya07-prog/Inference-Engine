@@ -241,9 +241,9 @@ def build_tensorrt_engine(
         raise TensorRTBuildError(f"build_serialized_network raised: {exc}") from exc
 
     if serialized is None:
-    raise TensorRTBuildError(
-        "TensorRT returned empty serialized engine."
-    )
+        raise TensorRTBuildError(
+            "TensorRT returned empty serialized engine."
+        )
 
     engine_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -266,7 +266,7 @@ def build_tensorrt_engine(
             {
                 "event": "tensorrt_build_done",
                 "engine_path": str(engine_path),
-                "bytes": len(serialized),
+                "bytes": len(serialized_bytes),
                 "fp16": use_fp16,
             },
             sort_keys=True,
