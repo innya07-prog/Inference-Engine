@@ -36,6 +36,8 @@ class TrtParityResult:
     allclose: bool
     atol: float
     rtol: float
+    cosine_similarity_threshold: float
+    max_abs_error_threshold: float
     input_shape: tuple[int, ...]
     checkpoint_path: str
     engine_path: str
@@ -107,7 +109,9 @@ def _print_report(
         f"Compare dtype:    {result.compare_dtype} (FP16-safe)",
         f"TRT output used:  {result.trt_output_name}",
         f"INT8 policy hook: {result.integer_output_policy}",
-        f"atol / rtol:      {result.atol:g} / {result.rtol:g}",
+        f"atol / rtol:      {result.atol:g} / {result.rtol:g} (np.allclose diagnostic only)",
+        f"PASS if cos >=:   {result.cosine_similarity_threshold:g}",
+        f"PASS if max|e|<=: {result.max_abs_error_threshold:g}",
         "-" * 72,
         f"Torch output:     shape={tuple(result.torch_output_shape)}  {torch_summary}",
         f"TRT output:       shape={tuple(result.trt_output_shape)}  {trt_summary}",
@@ -135,12 +139,17 @@ def validate_trt_parity(
     seed: int = 0,
     atol: float = 1e-5,
     rtol: float = 1e-4,
+    cosine_similarity_threshold: float = 0.999,
+    max_abs_error_threshold: float = 1e-2,
     print_report: bool = True,
     output_tensor: str | None = None,
     integer_output_policy: IntegerOutputPolicy = "raise",
 ) -> TrtParityResult:
     """
     Run the same random float32 input through PyTorch (checkpoint) and a TensorRT engine, then compare in float32.
+
+    PASS is determined by ``cosine_similarity`` and ``max_abs_error`` against configurable thresholds; ``numpy.allclose``
+    with ``atol``/``rtol`` is computed for diagnostics only.
 
     ``TensorRTRuntime`` is used for TRT so dynamic-shape engines work via ``set_input_shape`` from the feed shape.
     Batch dimensions are part of ``input_shape`` (e.g. ``(8, 128)`` for batch 8).
@@ -164,7 +173,10 @@ def validate_trt_parity(
         CUDA devices for reference Torch and TRT runtime. If ``torch_device`` is omitted, it defaults to ``trt_device``.
         If ``trt_device`` is omitted, it defaults to ``cuda:0`` when CUDA is available.
     seed, atol, rtol
-        RNG seed and ``numpy.allclose`` tolerances (PASS iff ``allclose`` is true).
+        RNG seed and ``numpy.allclose`` tolerances (reporting only; see ``cosine_similarity_threshold`` / ``max_abs_error_threshold`` for PASS).
+    cosine_similarity_threshold, max_abs_error_threshold
+        PASS requires ``cosine_similarity >= cosine_similarity_threshold`` and
+        ``max_abs_error <= max_abs_error_threshold`` (suited to FP16 CNN parity).
     print_report
         Print a human-readable report to stdout.
     output_tensor
@@ -209,7 +221,8 @@ def validate_trt_parity(
     x_torch = torch.from_numpy(x_np.copy()).to(device=torch_dev, dtype=torch.float32)
 
     logger.info(
-        "Starting TensorRT parity validation checkpoint=%s engine=%s shape=%s seed=%s torch=%s trt=%s atol=%s rtol=%s",
+        "Starting TensorRT parity validation checkpoint=%s engine=%s shape=%s seed=%s torch=%s trt=%s "
+        "atol=%s rtol=%s cos_th=%s max_abs_th=%s",
         ckpt,
         eng,
         shape,
@@ -218,6 +231,8 @@ def validate_trt_parity(
         trt_dev,
         atol,
         rtol,
+        cosine_similarity_threshold,
+        max_abs_error_threshold,
     )
 
     with torch.no_grad():
@@ -283,7 +298,10 @@ def validate_trt_parity(
     mean_abs = float(np.mean(diff)) if diff.size else 0.0
     cos_sim = _cosine_similarity(torch_np, trt_np)
     close = bool(np.allclose(torch_np, trt_np, atol=atol, rtol=rtol))
-    status: Status = "PASS" if close else "FAIL"
+    cos_th = float(cosine_similarity_threshold)
+    abs_th = float(max_abs_error_threshold)
+    passes = (cos_sim >= cos_th) and (max_abs <= abs_th)
+    status: Status = "PASS" if passes else "FAIL"
 
     result = TrtParityResult(
         status=status,
@@ -293,6 +311,8 @@ def validate_trt_parity(
         allclose=close,
         atol=float(atol),
         rtol=float(rtol),
+        cosine_similarity_threshold=cos_th,
+        max_abs_error_threshold=abs_th,
         input_shape=shape,
         checkpoint_path=str(ckpt),
         engine_path=str(eng),
@@ -316,6 +336,8 @@ def validate_trt_parity(
         "allclose": result.allclose,
         "atol": result.atol,
         "rtol": result.rtol,
+        "cosine_similarity_threshold": result.cosine_similarity_threshold,
+        "max_abs_error_threshold": result.max_abs_error_threshold,
         "input_shape": list(result.input_shape),
         "checkpoint_path": result.checkpoint_path,
         "engine_path": result.engine_path,
@@ -336,12 +358,14 @@ def validate_trt_parity(
         _print_report(result, torch_summary=torch_summary, trt_summary=trt_summary)
 
     logger.info(
-        "TensorRT parity finished: %s (max_abs=%.6e mean_abs=%.6e cos=%.6f allclose=%s)",
+        "TensorRT parity finished: %s (max_abs=%.6e mean_abs=%.6e cos=%.6f allclose=%s cos_th=%s max_abs_th=%s)",
         result.status,
         result.max_abs_error,
         result.mean_abs_error,
         result.cosine_similarity,
         result.allclose,
+        result.cosine_similarity_threshold,
+        result.max_abs_error_threshold,
     )
 
     return result

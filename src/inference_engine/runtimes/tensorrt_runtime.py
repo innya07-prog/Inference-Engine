@@ -189,12 +189,6 @@ class TensorRTRuntime:
                 if not ctx.set_input_shape(name, shape_tuple):
                     raise TensorRTRuntimeError(f"set_input_shape rejected shape {shape_tuple} for {name!r}")
 
-            if hasattr(ctx, "update_device_memory_size_for_shapes"):
-                try:
-                    ctx.update_device_memory_size_for_shapes()
-                except Exception as exc:
-                    logger.debug("update_device_memory_size_for_shapes failed (optional): %s", exc)
-
             for name in output_names:
                 trt_dtype = engine.get_tensor_dtype(name)
                 tt = _trt_dtype_to_torch(trt, trt_dtype)

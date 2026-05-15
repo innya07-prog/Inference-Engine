@@ -376,7 +376,19 @@ def run_resnet18_integration_pipeline(
             {k: onnx_parity[k] for k in ("max_abs_error", "mean_abs_error", "cosine_similarity", "allclose", "status") if onnx_parity and k in onnx_parity}
         ),
         "pytorch_vs_tensorrt": (
-            {k: trt_parity[k] for k in ("max_abs_error", "mean_abs_error", "cosine_similarity", "allclose", "status") if trt_parity and k in trt_parity}
+            {
+                k: trt_parity[k]
+                for k in (
+                    "max_abs_error",
+                    "mean_abs_error",
+                    "cosine_similarity",
+                    "allclose",
+                    "status",
+                    "cosine_similarity_threshold",
+                    "max_abs_error_threshold",
+                )
+                if trt_parity and k in trt_parity
+            }
             if trt_parity
             else None
         ),

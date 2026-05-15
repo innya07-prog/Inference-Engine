@@ -162,6 +162,8 @@ def cmd_verify_trt(args: argparse.Namespace) -> int:
             seed=args.seed,
             atol=args.atol,
             rtol=args.rtol,
+            cosine_similarity_threshold=args.cosine_threshold,
+            max_abs_error_threshold=args.max_abs_error_threshold,
             print_report=True,
             output_tensor=args.output_tensor,
         )
@@ -483,8 +485,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="When the checkpoint is a state_dict, load weights into packaged TestMLP.",
     )
     p_vtrt.add_argument("--seed", type=int, default=0, help="NumPy RNG seed for the shared input (default 0).")
-    p_vtrt.add_argument("--atol", type=float, default=1e-5, help="numpy.allclose absolute tolerance (default 1e-5).")
-    p_vtrt.add_argument("--rtol", type=float, default=1e-4, help="numpy.allclose relative tolerance (default 1e-4).")
+    p_vtrt.add_argument(
+        "--atol",
+        type=float,
+        default=1e-5,
+        help="numpy.allclose absolute tolerance for diagnostics only (default 1e-5).",
+    )
+    p_vtrt.add_argument(
+        "--rtol",
+        type=float,
+        default=1e-4,
+        help="numpy.allclose relative tolerance for diagnostics only (default 1e-4).",
+    )
+    p_vtrt.add_argument(
+        "--cosine-threshold",
+        type=float,
+        default=0.999,
+        help="PASS requires cosine similarity >= this value (default 0.999).",
+    )
+    p_vtrt.add_argument(
+        "--max-abs-error-threshold",
+        type=float,
+        default=1e-2,
+        help="PASS requires max absolute error <= this value (default 1e-2).",
+    )
     p_vtrt.add_argument(
         "--output-tensor",
         default=None,
